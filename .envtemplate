@@ -1,0 +1,15 @@
+# Mongo details
+MONGODB_USER=temp
+MONGODB_PW=temp
+MONGODB_URI=temp
+MONGODB_DB_NAME=temp
+
+# Postgresql details
+PG_DB_USER=temp
+PG_DB_PW=temp
+PG_PORT=temp
+PG_DB_URL=temp
+PG_DB_NAME=temp
+PG_DB_CORE_SCHEMA=temp
+PG_DB_ACT_SCHEMA=temp
+PG_DB_OUTPUT_SCHEMA=temp
