@@ -138,6 +138,10 @@ def prepare_features(
         .join(yesterday_likes_df, "video_id", "left")
     )
 
+    comments_df.unpersist()
+    likes_df.unpersist()
+    watch_history_df.unpersist()
+
     joined_df = joined_df.fillna(0, subset=NUMERIC_ZERO_COLS)
 
     joined_df = joined_df.fillna({
