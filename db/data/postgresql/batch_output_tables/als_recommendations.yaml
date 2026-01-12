@@ -1,0 +1,126 @@
+schema_definitions:
+  - column: id
+    type: serial
+    description: primary key
+
+  - column: user_id
+    type: integer
+    description: foreign key to user_profiles - the user receiving recommendations
+
+  - column: recommended_video_ids
+    type: integer[]
+    description: ordered array of recommended video IDs (best first)
+
+  - column: scores
+    type: decimal(6,4)[]
+    description: confidence scores for each video (parallel array to video_ids)
+
+  - column: model_version
+    type: varchar(50)
+    description: version identifier for the ALS model (format - als_vX.Y_YYYYMMDD)
+
+  - column: model_params
+    type: jsonb
+    nullable: true
+    description: model hyperparameters used for generation
+
+  - column: candidates_evaluated
+    type: integer
+    default: 0
+    description: number of videos considered during recommendation generation
+
+  - column: generation_time_ms
+    type: integer
+    default: 0
+    description: time taken to generate recommendations in milliseconds
+
+  - column: generated_at
+    type: timestamp
+    description: when these recommendations were generated
+
+  - column: expires_at
+    type: timestamp
+    nullable: true
+    description: optional expiration time for these recommendations
+
+  - column: is_active
+    type: boolean
+    default: true
+    description: soft delete flag for versioning
+
+als_recommendations_examples:
+  - id: 1
+    user_id: 123
+    recommended_video_ids: [101, 202, 303, 404, 505]
+    scores: [0.9823, 0.8512, 0.7763, 0.7234, 0.6891]
+    model_version: "als_v2.1_20251202"
+    model_params: {"rank": 10, "maxIter": 10, "regParam": 0.1, "implicitPrefs": true}
+    candidates_evaluated: 5000
+    generation_time_ms: 125
+    generated_at: "2025-12-02T03:30:00Z"
+    expires_at: "2025-12-03T03:30:00Z"
+    is_active: true
+
+  - id: 2
+    user_id: 456
+    recommended_video_ids: [789, 890, 123, 234, 345]
+    scores: [0.9512, 0.9234, 0.8876, 0.8234, 0.7654]
+    model_version: "als_v2.1_20251202"
+    model_params: {"rank": 10, "maxIter": 10, "regParam": 0.1, "implicitPrefs": true}
+    candidates_evaluated: 5000
+    generation_time_ms: 118
+    generated_at: "2025-12-02T03:30:05Z"
+    expires_at: "2025-12-03T03:30:05Z"
+    is_active: true
+
+indexes:
+  - name: idx_als_user_latest
+    columns: [user_id, generated_at]
+    order: DESC
+    condition: "WHERE is_active = true"
+
+  - name: idx_als_model_version
+    columns: [model_version, generated_at]
+    order: DESC
+
+  - name: idx_als_cleanup
+    columns: [is_active, generated_at]
+    condition: "WHERE is_active = false"
+
+  - name: idx_als_video_recommendations
+    columns: [recommended_video_ids]
+    type: GIN
+
+constraints:
+  - name: fk_als_user
+    type: foreign_key
+    columns: [user_id]
+    references: user_profiles(id)
+
+als_algorithm_details:
+  name: "Alternating Least Squares (ALS)"
+  library: "pyspark.ml.recommendation.ALS"
+
+  implicit_rating_formula: |
+    implicit_rating = (
+        1.0 x view +
+        2.0 x watch_ratio +
+        3.0 x complete +
+        4.0 x like +
+        4.0 x dislike -
+        5.0 x comment
+    )
+
+  default_params:
+    rank: 10
+    maxIter: 10
+    regParam: 0.1
+    implicitPrefs: true
+    coldStartStrategy: "drop"
+
+  filtering_rules:
+    - "Exclude videos user has already watched"
+    - "Apply age_rating filter based on user birthdate"
+    - "Apply content availability by country"
+
+update_frequency: "Daily at 03:00 via Spark Batch Job"

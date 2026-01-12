@@ -1,0 +1,67 @@
+{
+  "_comment": "Denormalized video data for fast API reads. Synced from PostgreSQL.",
+
+  "example_document": {
+    "_id": "video_456",
+    "video_id": 456,
+
+    "title": "How Kubernetes Works",
+    "description": "A comprehensive guide to Kubernetes architecture and deployment",
+    "thumbnail_url": "https://cdn.example.com/thumbnails/456.jpg",
+    "video_url": "https://cdn.example.com/videos/456.mp4",
+    "duration_seconds": 1200,
+    "duration_formatted": "20:00",
+
+    "category": {
+      "id": 3,
+      "name": "DevOps",
+      "slug": "devops"
+    },
+
+    "publisher": {
+      "id": 101,
+      "username": "QSA-Technology",
+      "avatar_url": "https://cdn.example.com/avatars/101.jpg",
+      "subscriber_count": 150000,
+      "is_verified": true
+    },
+
+    "tags": ["kubernetes", "docker", "devops", "cloud", "container"],
+    "language": "en",
+    "age_rating": "G",
+
+    "stats": {
+      "views": 125000,
+      "likes": 8500,
+      "dislikes": 120,
+      "comments": 432,
+      "shares": 1200,
+      "avg_watch_percentage": 72.5,
+      "completion_rate": 45.2
+    },
+
+    "engagement": {
+      "like_ratio": 0.986,
+      "engagement_score": 8.75,
+      "trending_score": 9.12
+    },
+
+    "timestamps": {
+      "uploaded_at": "2025-10-10T14:00:00Z",
+      "last_updated": "2025-12-02T03:00:00Z"
+    }
+  },
+
+  "indexes": [
+    { "video_id": 1 },
+    { "category.slug": 1 },
+    { "publisher.id": 1 },
+    { "stats.views": -1 },
+    { "engagement.trending_score": -1 },
+    { "tags": 1 },
+    { "timestamps.uploaded_at": -1 }
+  ],
+
+  "sync_strategy": "Other one is CDC (Change Data Capture)"
+}
+

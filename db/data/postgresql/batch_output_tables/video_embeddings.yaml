@@ -1,0 +1,146 @@
+schema_definitions:
+  - column: id
+    type: serial
+    description: primary key
+
+  - column: video_id
+    type: integer
+    description: foreign key to videos table
+
+  - column: content_embedding
+    type: double precision[]
+    nullable: true
+    description: text-based embedding from title, description, tags
+
+  - column: behavioral_embedding
+    type: double precision[]
+    nullable: true
+    description: collaborative filtering embedding from ALS item factors
+
+  - column: combined_embedding
+    type: double precision[]
+    nullable: true
+    description: hybrid embedding combining content and behavioral signals
+
+  - column: embedding_dim
+    type: integer
+    description: dimension size of the embeddings (e.g., 128, 256, 512)
+
+  - column: model_version
+    type: varchar(50)
+    description: version identifier for the embedding model
+
+  - column: model_type
+    type: varchar(30)
+    nullable: true
+    description: type of model used (tfidf_svd, word2vec, sentence_bert, als_factors)
+
+  - column: model_params
+    type: jsonb
+    nullable: true
+    description: model hyperparameters used for generation
+
+  - column: source_features
+    type: jsonb
+    nullable: true
+    description: which features were used to generate the embedding
+
+  - column: calculated_at
+    type: timestamp
+    description: when this embedding was calculated
+
+  - column: is_latest
+    type: boolean
+    default: true
+    description: flag to indicate if this is the latest embedding for the video
+
+video_embeddings_examples:
+  - id: 1
+    video_id: 456
+    content_embedding: [0.1234, -0.5678, 0.9012, 0.3456, -0.7890]  # truncated for readability
+    behavioral_embedding: [0.2345, 0.6789, -0.1234, 0.5678, 0.9012]
+    combined_embedding: [0.1789, 0.0556, 0.3889, 0.4567, 0.0561]
+    embedding_dim: 128
+    model_version: "emb_v1.2_bert_als_20251202"
+    model_type: "hybrid"
+    model_params: {"content_model": "sentence_bert", "als_rank": 64, "combination": "concat_normalize"}
+    source_features: {"title": true, "tags": true, "description": true, "als_factors": true}
+    calculated_at: "2025-12-02T04:00:00Z"
+    is_latest: true
+
+  - id: 2
+    video_id: 789
+    content_embedding: [0.3456, -0.1234, 0.7890, 0.2345, -0.6789]
+    behavioral_embedding: [0.5678, 0.1234, -0.3456, 0.7890, 0.2345]
+    combined_embedding: [0.4567, -0.0000, 0.2217, 0.5118, -0.2222]
+    embedding_dim: 128
+    model_version: "emb_v1.2_bert_als_20251202"
+    model_type: "hybrid"
+    model_params: {"content_model": "sentence_bert", "als_rank": 64, "combination": "concat_normalize"}
+    source_features: {"title": true, "tags": true, "description": true, "als_factors": true}
+    calculated_at: "2025-12-02T04:00:00Z"
+    is_latest: true
+
+indexes:
+  - name: idx_video_emb_latest
+    columns: [video_id]
+    condition: "WHERE is_latest = true"
+
+  - name: idx_video_emb_model
+    columns: [model_version, calculated_at]
+    order: DESC
+
+  - name: idx_video_emb_cleanup
+    columns: [is_latest, calculated_at]
+
+  - name: idx_video_emb_calculated
+    columns: [calculated_at]
+    order: DESC
+
+constraints:
+  - name: video_embeddings_video_id_is_latest_key
+    type: unique
+    columns: [video_id, is_latest]
+
+  - name: fk_video_emb_video
+    type: foreign_key
+    columns: [video_id]
+    references: videos(id)
+
+embedding_strategies:
+  content_based:
+    name: "Text-Based Content Embeddings"
+    options:
+      - method: "TF-IDF + SVD"
+        description: "Simple, fast, good baseline"
+        typical_dim: 100
+      - method: "Word2Vec / Doc2Vec"
+        description: "Captures semantic relationships"
+        typical_dim: 128
+      - method: "Sentence-BERT"
+        description: "Best quality, slower"
+        typical_dim: 384
+
+  behavioral:
+    name: "Collaborative Filtering Embeddings"
+    source: "ALS model item factors"
+    method: "model.itemFactors from trained ALS"
+    typical_dim: 64
+
+  hybrid:
+    name: "Combined Embeddings"
+    methods:
+      - "Concatenate content + behavioral, then normalize"
+      - "Weighted average of both embeddings"
+      - "Train a fusion layer on top"
+
+similarity_functions:
+  - name: "Cosine Similarity"
+    formula: "dot(A, B) / (norm(A) * norm(B))"
+    range: "[-1, 1]"
+
+  - name: "Euclidean Distance"
+    formula: "sqrt(sum((A - B)^2))"
+    range: "[0, inf)"
+
+update_frequency: "Daily at 03:00 via Spark Batch Job"

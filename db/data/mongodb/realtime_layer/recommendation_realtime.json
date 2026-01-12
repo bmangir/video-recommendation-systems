@@ -1,0 +1,113 @@
+{
+  "_comment": "Real-time personalized recommendations per user. Updated by Spark Streaming.",
+
+  "example_document": {
+    "_id": "rec_user_123",
+    "user_id": 123,
+    "generated_at": "2025-12-02T15:03:05Z",
+    "expires_at": "2025-12-02T16:03:05Z",
+
+    "recommendations": {
+      "for_you": [
+        {
+          "video_id": 101,
+          "score": 0.92,
+          "reason": "Based on your interest in DevOps",
+          "video": {
+            "title": "Docker Best Practices 2025",
+            "thumbnail_url": "https://cdn.example.com/thumbnails/101.jpg",
+            "duration_formatted": "18:45",
+            "publisher": {
+              "username": "DockerPro",
+              "avatar_url": "https://cdn.example.com/avatars/55.jpg"
+            },
+            "stats": {
+              "views": 45000,
+              "like_ratio": 0.97
+            }
+          }
+        },
+        {
+          "video_id": 202,
+          "score": 0.81,
+          "reason": "Similar to videos you liked",
+          "video": {
+            "title": "CI/CD Pipeline Tutorial",
+            "thumbnail_url": "https://cdn.example.com/thumbnails/202.jpg",
+            "duration_formatted": "25:10",
+            "publisher": {
+              "username": "DevOpsGuru",
+              "avatar_url": "https://cdn.example.com/avatars/78.jpg"
+            },
+            "stats": {
+              "views": 32000,
+              "like_ratio": 0.94
+            }
+          }
+        }
+      ],
+
+      "continue_watching": [
+        {
+          "video_id": 789,
+          "last_position_seconds": 420,
+          "video_duration_seconds": 930,
+          "progress_percentage": 45.2,
+          "video": {
+            "title": "React Hooks Deep Dive",
+            "thumbnail_url": "https://cdn.example.com/thumbnails/789.jpg"
+          }
+        }
+      ],
+
+      "because_you_watched": {
+        "source_video_id": 456,
+        "source_video_title": "How Kubernetes Works",
+        "recommendations": [
+          {
+            "video_id": 303,
+            "score": 0.78,
+            "video": {
+              "title": "Kubernetes Security Best Practices",
+              "thumbnail_url": "https://cdn.example.com/thumbnails/303.jpg"
+            }
+          }
+        ]
+      },
+
+      "from_subscriptions": [
+        {
+          "video_id": 555,
+          "is_new": true,
+          "uploaded_hours_ago": 2,
+          "video": {
+            "title": "New Docker 25 Features",
+            "thumbnail_url": "https://cdn.example.com/thumbnails/555.jpg",
+            "publisher": {
+              "username": "DockerPro"
+            }
+          }
+        }
+      ]
+    },
+
+    "metadata": {
+      "model_version": "als_v2.1",
+      "generation_time_ms": 125,
+      "total_candidates_evaluated": 5000
+    }
+  },
+
+  "indexes": [
+    { "user_id": 1 },
+    { "expires_at": 1 }
+  ],
+
+  "ttl_index": {
+    "field": "expires_at",
+    "expire_after_seconds": 0,
+    "comment": "expires_at time auto delete"
+  },
+
+  "update_frequency": "Every 30 minutes"
+}

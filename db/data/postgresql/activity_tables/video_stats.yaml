@@ -1,0 +1,112 @@
+schema_definitions:
+  - column: video_id
+    type: integer
+    description: primary key, foreign key to videos
+
+  - column: total_views
+    type: integer
+    default: 0
+    description: total view count
+
+  - column: total_likes
+    type: integer
+    default: 0
+    description: total like count
+
+  - column: total_dislikes
+    type: integer
+    default: 0
+    description: total dislike count
+
+  - column: total_comments
+    type: integer
+    default: 0
+    description: total comment count
+
+  - column: total_shares
+    type: integer
+    default: 0
+    description: total share count
+
+  - column: unique_viewers
+    type: integer
+    default: 0
+    description: count of unique users who watched
+
+  - column: total_watch_time_seconds
+    type: bigint
+    default: 0
+    description: sum of all watch time in seconds
+
+  - column: avg_watch_percentage
+    type: decimal(5,2)
+    default: 0
+    description: average watch percentage across all viewers
+
+  - column: completion_rate
+    type: decimal(5,2)
+    default: 0
+    description: percentage of viewers who completed the video
+
+  - column: engagement_score
+    type: decimal(10,4)
+    default: 0
+    description: calculated engagement score
+
+  - column: trending_score
+    type: decimal(10,4)
+    default: 0
+    description: calculated trending score
+
+  - column: last_calculated_at
+    type: timestamp
+    description: when stats were last calculated
+
+video_stats_examples:
+  - video_id: 456
+    total_views: 15420
+    total_likes: 1230
+    total_dislikes: 45
+    total_comments: 342
+    total_shares: 89
+    unique_viewers: 12350
+    total_watch_time_seconds: 12500000
+    avg_watch_percentage: 72.50
+    completion_rate: 45.20
+    engagement_score: 8.7543
+    trending_score: 9.1234
+    last_calculated_at: "2025-12-02T03:00:00Z"
+
+  - video_id: 789
+    total_views: 5600
+    total_likes: 420
+    total_dislikes: 12
+    total_comments: 98
+    total_shares: 34
+    unique_viewers: 4800
+    total_watch_time_seconds: 2800000
+    avg_watch_percentage: 55.30
+    completion_rate: 32.10
+    engagement_score: 6.2341
+    trending_score: 5.8762
+    last_calculated_at: "2025-12-02T03:00:00Z"
+
+indexes:
+  - name: idx_video_stats_trending
+    columns: [trending_score]
+    order: DESC
+
+  - name: idx_video_stats_engagement
+    columns: [engagement_score]
+    order: DESC
+
+  - name: idx_video_stats_views
+    columns: [total_views]
+    order: DESC
+
+constraints:
+  - name: fk_video_stats_video
+    type: foreign_key
+    columns: [video_id]
+    references: videos(id)
+

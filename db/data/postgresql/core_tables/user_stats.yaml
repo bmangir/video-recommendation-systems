@@ -1,0 +1,116 @@
+schema_definitions:
+  - column: user_id
+    type: integer
+    unique: true
+    description: foreign key to user_profiles table
+    references: user_profiles(id)
+
+  - column: is_verified
+    type: boolean
+    default: false
+    description: whether user/channel is verified (blue checkmark)
+
+  - column: total_video_count
+    type: integer
+    default: 0
+    description: number of videos uploaded (denormalized for fast display)
+
+  - column: total_views
+    type: bigint
+    default: 0
+    description: total views across all videos (for creator analytics)
+
+  - column: status
+    type: varchar(20)
+    default: 'active'
+    description: account status (active, suspended, deleted, pending_verification)
+
+  - column: preferred_language
+    type: char(2)
+    default: 'en'
+    description: user's preferred language for video content (ISO 639-1 code)
+
+  - column: autoplay_enabled
+    type: boolean
+    default: true
+    description: whether videos should autoplay after current video ends
+
+  - column: notifications_enabled
+    type: boolean
+    default: true
+    description: whether user wants to receive notifications
+
+  - column: theme
+    type: varchar(10)
+    default: 'dark'
+    description: UI theme preference (dark, light, system)
+
+  - column: default_video_quality
+    type: varchar(10)
+    default: '720p'
+    description: default video quality setting (auto, 360p, 480p, 720p, 1080p, 1440p, 4k)
+
+user_stats_examples:
+  - user_id: 101
+    is_verified: true
+    total_video_count: 87
+    total_views: 12500000
+    status: "active"
+    preferred_language: "tr"
+    autoplay_enabled: true
+    notifications_enabled: true
+    theme: "dark"
+    default_video_quality: "1080p"
+
+  - user_id: 123
+    is_verified: false
+    total_video_count: 0
+    total_views: 0
+    status: "active"
+    preferred_language: "tr"
+    autoplay_enabled: true
+    notifications_enabled: false
+    theme: "light"
+    default_video_quality: "720p"
+
+  - user_id: 456
+    is_verified: false
+    total_video_count: 0
+    total_views: 0
+    status: "active"
+    preferred_language: "en"
+    autoplay_enabled: false
+    notifications_enabled: true
+    theme: "system"
+    default_video_quality: "auto"
+
+indexes:
+  - name: idx_user_stats_user_id
+    columns: [user_id]
+    unique: true
+
+  - name: idx_user_stats_status
+    columns: [status]
+
+  - name: idx_user_stats_verified
+    columns: [is_verified]
+    condition: "WHERE is_verified = true"
+
+constraints:
+  - name: chk_status
+    type: check
+    condition: "status IN ('active', 'suspended', 'deleted', 'pending_verification')"
+
+  - name: chk_theme
+    type: check
+    condition: "theme IN ('dark', 'light', 'system')"
+
+  - name: chk_quality
+    type: check
+    condition: "default_video_quality IN ('auto', '360p', '480p', '720p', '1080p', '1440p', '4k')"
+
+  - name: fk_user_stats_user
+    type: foreign_key
+    columns: [user_id]
+    references: user_profiles(id)
+    on_delete: CASCADE

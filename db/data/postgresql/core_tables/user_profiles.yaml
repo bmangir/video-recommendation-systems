@@ -1,0 +1,112 @@
+schema_definitions:
+  - column: id
+    type: serial
+    description: primary key, unique identifier for the user
+
+  - column: username
+    type: text
+    unique: true
+    description: the user's chosen public username (unique, used for @mentions)
+
+  - column: birthdate
+    type: date
+    description: user's birth date (used for age restriction on content)
+    constraint: "must be >= 18 years old"
+
+  - column: country
+    type: char(2)
+    nullable: true
+    description: ISO 3166-1 alpha-2 country code (TR, US, DE, etc.)
+
+  - column: email
+    type: varchar(255)
+    unique: true
+    nullable: false
+    description: user's email address for authentication and notifications
+
+  - column: password
+    type: text
+    description: securely hashed password (bcrypt or argon2)
+
+  - column: avatar_url
+    type: text
+    nullable: true
+    description: URL to user's profile picture
+
+  - column: bio
+    type: text
+    nullable: true
+    description: user's profile description/bio (max 500 chars recommended)
+
+  - column: is_creator
+    type: boolean
+    default: false
+    description: whether user has a channel and uploads videos
+
+  - column: subscriber_count
+    type: integer
+    default: 0
+    description: number of subscribers (denormalized for fast display)
+
+  - column: registered_date
+    type: timestamp
+    default: CURRENT_TIMESTAMP
+    description: when the user registered their account
+
+  - column: last_active_at
+    type: timestamp
+    nullable: true
+    description: last activity timestamp (for online status, churn analysis)
+
+user_profiles_examples:
+  - id: 101
+    username: "QSA-Technology"
+    birthdate: "1990-05-15"
+    country: "TR"
+    email: "qsa@example.com"
+    password: "$2b$12$hashedPasswordHere..."
+    avatar_url: "https://cdn.example.com/avatars/101.jpg"
+    bio: "DevOps & Cloud tutorials. Making complex topics simple!"
+    is_creator: true
+    subscriber_count: 150000
+    registered_date: "2023-01-15T10:00:00Z"
+    last_active_at: "2025-12-02T14:30:00Z"
+
+  - id: 123
+    username: "user123"
+    birthdate: "2003-01-02"
+    country: "TR"
+    email: "user123@example.com"
+    password: "$2b$12$hashedPasswordHere..."
+    avatar_url: null
+    bio: null
+    is_creator: false
+    subscriber_count: 0
+    registered_date: "2025-09-09T00:00:00Z"
+    last_active_at: "2025-12-02T15:00:00Z"
+
+  - id: 456
+    username: "tech_enthusiast"
+    birthdate: "1995-08-20"
+    country: "US"
+    email: "tech@example.com"
+    password: "$2b$12$hashedPasswordHere..."
+    avatar_url: "https://cdn.example.com/avatars/456.jpg"
+    bio: "Love learning about new technologies!"
+    is_creator: false
+    subscriber_count: 0
+    registered_date: "2024-06-01T00:00:00Z"
+    last_active_at: "2025-12-01T20:00:00Z"
+
+indexes:
+  - name: idx_country
+    columns: [country]
+
+  - name: idx_birthdate
+    columns: [birthdate]
+
+constraints:
+  - name: chk_age
+    type: check
+    condition: "birthdate <= (CURRENT_DATE - INTERVAL '18 years')"
+    description: "Users must be at least 18 years old"

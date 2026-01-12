@@ -1,0 +1,77 @@
+schema_definitions:
+  - column: id
+    type: serial
+    description: primary key
+
+  - column: name
+    type: varchar(100)
+    description: category display name (unique)
+
+  - column: slug
+    type: varchar(100)
+    description: URL-friendly category name (unique)
+
+  - column: parent_id
+    type: integer
+    nullable: true
+    description: foreign key to parent category (for subcategories)
+
+  - column: icon_url
+    type: text
+    nullable: true
+    description: category icon URL
+
+  - column: created_at
+    type: timestamp
+    description: creation timestamp
+
+categories_examples:
+  - id: 1
+    name: "Technology"
+    slug: "technology"
+    parent_id: null
+    icon_url: "/icons/tech.svg"
+
+  - id: 2
+    name: "Programming"
+    slug: "programming"
+    parent_id: 1
+    icon_url: "/icons/code.svg"
+
+  - id: 3
+    name: "DevOps"
+    slug: "devops"
+    parent_id: 1
+    icon_url: "/icons/devops.svg"
+
+  - id: 4
+    name: "Gaming"
+    slug: "gaming"
+    parent_id: null
+    icon_url: "/icons/gaming.svg"
+
+  - id: 5
+    name: "Music"
+    slug: "music"
+    parent_id: null
+    icon_url: "/icons/music.svg"
+
+  - id: 6
+    name: "Education"
+    slug: "education"
+    parent_id: null
+    icon_url: "/icons/education.svg"
+
+indexes:
+  - name: idx_categories_slug
+    columns: [slug]
+
+  - name: idx_categories_parent
+    columns: [parent_id]
+
+constraints:
+  - name: fk_categories_parent
+    type: foreign_key
+    columns: [parent_id]
+    references: categories(id)
+

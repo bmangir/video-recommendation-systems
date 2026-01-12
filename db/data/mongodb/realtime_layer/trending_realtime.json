@@ -1,0 +1,77 @@
+{
+  "_comment": "Real-time trending videos. Updated by Spark Streaming every minute.",
+
+  "example_document": {
+    "_id": "trending_2025-12-02T15:00:00",
+    "window_start": "2025-12-02T15:00:00Z",
+    "window_end": "2025-12-02T15:01:00Z",
+    "calculated_at": "2025-12-02T15:01:05Z",
+
+    "trending_videos": [
+      {
+        "rank": 1,
+        "video_id": 456,
+        "title": "How Kubernetes Works",
+        "thumbnail_url": "https://cdn.example.com/thumbnails/456.jpg",
+        "duration_formatted": "20:00",
+        "publisher": {
+          "username": "QSA-Technology",
+          "avatar_url": "https://cdn.example.com/avatars/101.jpg"
+        },
+        "trend_score": 892.5,
+        "window_stats": {
+          "views": 1200,
+          "likes": 320,
+          "completes": 450,
+          "comments": 85
+        },
+        "velocity": 2.3,
+        "velocity_description": "2.3x normal rate"
+      },
+      {
+        "rank": 2,
+        "video_id": 789,
+        "title": "React 19 New Features",
+        "thumbnail_url": "https://cdn.example.com/thumbnails/789.jpg",
+        "duration_formatted": "15:30",
+        "publisher": {
+          "username": "WebDevMaster",
+          "avatar_url": "https://cdn.example.com/avatars/102.jpg"
+        },
+        "trend_score": 756.2,
+        "window_stats": {
+          "views": 980,
+          "likes": 245,
+          "completes": 320,
+          "comments": 62
+        },
+        "velocity": 1.8,
+        "velocity_description": "1.8x normal rate"
+      }
+    ],
+
+    "by_category": {
+      "technology": [456, 789, 123],
+      "gaming": [901, 234],
+      "music": [567, 890]
+    },
+
+    "metadata": {
+      "total_videos_analyzed": 15420,
+      "processing_time_ms": 850
+    }
+  },
+
+  "indexes": [
+    { "window_start": -1 },
+    { "trending_videos.video_id": 1 }
+  ],
+
+  "ttl_index": {
+    "field": "window_start",
+    "expire_after_seconds": 86400,
+    "comment": "After 24 hours, delete automatically"
+  },
+
+  "update_frequency": "Every 1 minute (Spark Streaming)"
+}

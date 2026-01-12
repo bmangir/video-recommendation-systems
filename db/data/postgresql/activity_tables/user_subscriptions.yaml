@@ -1,0 +1,77 @@
+schema_definitions:
+  - column: id
+    type: serial
+    description: primary key
+
+  - column: subscriber_id
+    type: integer
+    description: foreign key to user_profiles (the user who subscribes)
+
+  - column: channel_id
+    type: integer
+    description: foreign key to user_profiles (the channel/creator being subscribed to)
+
+  - column: notifications_enabled
+    type: boolean
+    default: true
+    description: whether subscriber wants notifications from this channel
+
+  - column: created_at
+    type: timestamp
+    description: subscription creation timestamp
+
+user_subscriptions_examples:
+  - id: 1
+    subscriber_id: 123
+    channel_id: 101
+    notifications_enabled: true
+    created_at: "2025-10-15T09:00:00Z"
+
+  - id: 2
+    subscriber_id: 123
+    channel_id: 102
+    notifications_enabled: false
+    created_at: "2025-11-01T14:30:00Z"
+
+  - id: 3
+    subscriber_id: 456
+    channel_id: 101
+    notifications_enabled: true
+    created_at: "2025-11-20T10:00:00Z"
+
+  - id: 4
+    subscriber_id: 789
+    channel_id: 101
+    notifications_enabled: true
+    created_at: "2025-12-01T08:00:00Z"
+
+indexes:
+  - name: idx_subs_subscriber
+    columns: [subscriber_id]
+
+  - name: idx_subs_channel
+    columns: [channel_id]
+
+  - name: idx_subs_notifications
+    columns: [channel_id, notifications_enabled]
+    condition: "WHERE notifications_enabled = true"
+
+constraints:
+  - name: user_subscriptions_subscriber_id_channel_id_key
+    type: unique
+    columns: [subscriber_id, channel_id]
+
+  - name: chk_no_self_subscribe
+    type: check
+    condition: "subscriber_id != channel_id"
+
+  - name: fk_subs_subscriber
+    type: foreign_key
+    columns: [subscriber_id]
+    references: user_profiles(id)
+
+  - name: fk_subs_channel
+    type: foreign_key
+    columns: [channel_id]
+    references: user_profiles(id)
+

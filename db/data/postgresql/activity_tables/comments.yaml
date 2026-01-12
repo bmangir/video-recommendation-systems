@@ -1,0 +1,134 @@
+schema_definitions:
+  - column: id
+    type: serial
+    description: primary key
+
+  - column: user_id
+    type: integer
+    description: foreign key to user_profiles (comment author)
+
+  - column: video_id
+    type: integer
+    description: foreign key to videos
+
+  - column: parent_id
+    type: integer
+    nullable: true
+    description: foreign key to parent comment (for replies)
+
+  - column: content
+    type: text
+    description: comment text content
+
+  - column: like_count
+    type: integer
+    default: 0
+    description: number of likes on this comment
+
+  - column: reply_count
+    type: integer
+    default: 0
+    description: number of replies to this comment
+
+  - column: status
+    type: varchar(20)
+    default: 'active'
+    description: comment status (active, deleted, hidden, spam)
+
+  - column: is_pinned
+    type: boolean
+    default: false
+    description: whether comment is pinned by video creator
+
+  - column: is_creator_heart
+    type: boolean
+    default: false
+    description: whether video creator hearted this comment
+
+  - column: created_at
+    type: timestamp
+    description: comment creation timestamp
+
+  - column: updated_at
+    type: timestamp
+    description: last edit timestamp
+
+comments_examples:
+  - id: 1
+    user_id: 789
+    video_id: 456
+    parent_id: null
+    content: "Amazing video! Very well explained."
+    like_count: 42
+    reply_count: 3
+    status: "active"
+    is_pinned: true
+    is_creator_heart: true
+    created_at: "2025-12-01T14:10:02Z"
+    updated_at: "2025-12-01T14:10:02Z"
+
+  - id: 2
+    user_id: 101
+    video_id: 456
+    parent_id: 1
+    content: "Thanks! Glad you found it helpful."
+    like_count: 15
+    reply_count: 0
+    status: "active"
+    is_pinned: false
+    is_creator_heart: false
+    created_at: "2025-12-01T15:00:00Z"
+    updated_at: "2025-12-01T15:00:00Z"
+
+  - id: 3
+    user_id: 456
+    video_id: 456
+    parent_id: 1
+    content: "I agree, best Kubernetes tutorial!"
+    like_count: 8
+    reply_count: 0
+    status: "active"
+    is_pinned: false
+    is_creator_heart: false
+    created_at: "2025-12-01T16:30:00Z"
+    updated_at: "2025-12-01T16:30:00Z"
+
+indexes:
+  - name: idx_comments_video
+    columns: [video_id]
+
+  - name: idx_comments_user
+    columns: [user_id]
+
+  - name: idx_comments_parent
+    columns: [parent_id]
+
+  - name: idx_comments_video_time
+    columns: [video_id, created_at]
+    order: DESC
+
+  - name: idx_comments_active
+    columns: [video_id, created_at]
+    order: DESC
+    condition: "WHERE status = 'active'"
+
+constraints:
+  - name: chk_comment_status
+    type: check
+    condition: "status IN ('active', 'deleted', 'hidden', 'spam')"
+
+  - name: fk_comments_user
+    type: foreign_key
+    columns: [user_id]
+    references: user_profiles(id)
+
+  - name: fk_comments_video
+    type: foreign_key
+    columns: [video_id]
+    references: videos(id)
+
+  - name: fk_comments_parent
+    type: foreign_key
+    columns: [parent_id]
+    references: comments(id)
+

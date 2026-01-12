@@ -1,0 +1,87 @@
+{
+  "_comment": "Real-time user profile for personalization. Updated by Spark Streaming on each activity.",
+
+  "example_document": {
+    "_id": "profile_user_123",
+    "user_id": 123,
+    "last_updated": "2025-12-02T15:02:12Z",
+
+    "category_scores": {
+      "technology": 0.81,
+      "devops": 0.72,
+      "programming": 0.65,
+      "gaming": 0.34,
+      "music": 0.10,
+      "education": 0.45
+    },
+
+    "tag_preferences": {
+      "kubernetes": 0.89,
+      "docker": 0.85,
+      "react": 0.72,
+      "javascript": 0.68,
+      "python": 0.55
+    },
+
+    "watch_patterns": {
+      "preferred_duration": {
+        "short": 0.15,
+        "medium": 0.55,
+        "long": 0.30
+      },
+      "active_hours": {
+        "morning": 0.10,
+        "afternoon": 0.25,
+        "evening": 0.50,
+        "night": 0.15
+      },
+      "preferred_devices": {
+        "desktop": 0.60,
+        "mobile": 0.35,
+        "tablet": 0.05
+      },
+      "avg_session_minutes": 45,
+      "avg_videos_per_session": 5.2
+    },
+
+    "recent_activity": {
+      "last_5_watched": [456, 789, 123, 555, 222],
+      "last_5_liked": [456, 123, 888],
+      "last_5_commented": [456],
+      "recently_searched": ["kubernetes tutorial", "docker compose", "react hooks"]
+    },
+
+    "engagement_level": {
+      "overall_score": 7.8,
+      "likes_per_100_views": 12.5,
+      "comments_per_100_views": 2.3,
+      "completion_rate": 0.68,
+      "churn_risk": "low"
+    },
+
+    "favorite_publishers": [
+      {
+        "publisher_id": 101,
+        "username": "QSA-Technology",
+        "affinity_score": 0.92
+      },
+      {
+        "publisher_id": 55,
+        "username": "DockerPro",
+        "affinity_score": 0.85
+      }
+    ],
+
+    "subscriptions_count": 45,
+    "total_watch_time_hours": 156.5,
+    "member_since": "2025-09-09T00:00:00Z"
+  },
+
+  "indexes": [
+    { "user_id": 1 },
+    { "last_updated": -1 },
+    { "engagement_level.churn_risk": 1 }
+  ],
+
+  "update_frequency": "After every user action (real-time streaming)"
+}

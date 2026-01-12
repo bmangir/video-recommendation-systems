@@ -1,0 +1,140 @@
+schema_definitions:
+  - column: id
+    type: serial
+    description: primary key
+
+  - column: user_id
+    type: integer
+    description: foreign key to user_profiles
+
+  - column: video_id
+    type: integer
+    description: foreign key to videos
+
+  - column: watched_seconds
+    type: integer
+    default: 0
+    description: total seconds watched in this video
+
+  - column: video_duration_seconds
+    type: integer
+    description: total video duration (denormalized for query speed)
+
+  - column: watch_percentage
+    type: decimal(5,2)
+    description: calculated percentage (watched_seconds / video_duration_seconds * 100)
+    generated: true
+
+  - column: is_completed
+    type: boolean
+    default: false
+    description: whether user completed the video (watched >= 90%)
+
+  - column: watch_count
+    type: integer
+    default: 1
+    description: how many times user watched this video
+
+  - column: last_position_seconds
+    type: integer
+    default: 0
+    description: last position for resume functionality
+
+  - column: device_type
+    type: varchar(20)
+    nullable: true
+    description: device used (mobile, desktop, tablet, tv)
+
+  - column: source
+    type: varchar(50)
+    nullable: true
+    description: how user found the video (home, search, recommendation, trending)
+
+  - column: first_watched_at
+    type: timestamp
+    description: first watch timestamp
+
+  - column: last_watched_at
+    type: timestamp
+    description: most recent watch timestamp
+
+watch_history_examples:
+  - id: 1
+    user_id: 123
+    video_id: 456
+    watched_seconds: 1080
+    video_duration_seconds: 1200
+    watch_percentage: 90.00
+    is_completed: true
+    watch_count: 2
+    last_position_seconds: 1080
+    device_type: "desktop"
+    source: "recommendation"
+    first_watched_at: "2025-12-01T14:00:00Z"
+    last_watched_at: "2025-12-02T10:30:00Z"
+
+  - id: 2
+    user_id: 123
+    video_id: 789
+    watched_seconds: 180
+    video_duration_seconds: 900
+    watch_percentage: 20.00
+    is_completed: false
+    watch_count: 1
+    last_position_seconds: 180
+    device_type: "mobile"
+    source: "search"
+    first_watched_at: "2025-12-02T15:00:00Z"
+    last_watched_at: "2025-12-02T15:03:00Z"
+
+  - id: 3
+    user_id: 456
+    video_id: 456
+    watched_seconds: 600
+    video_duration_seconds: 1200
+    watch_percentage: 50.00
+    is_completed: false
+    watch_count: 1
+    last_position_seconds: 600
+    device_type: "tablet"
+    source: "home"
+    first_watched_at: "2025-12-01T20:00:00Z"
+    last_watched_at: "2025-12-01T20:10:00Z"
+
+indexes:
+  - name: idx_watch_user
+    columns: [user_id]
+
+  - name: idx_watch_video
+    columns: [video_id]
+
+  - name: idx_watch_completed
+    columns: [is_completed]
+    condition: "WHERE is_completed = true"
+
+  - name: idx_watch_last
+    columns: [user_id, last_watched_at]
+    order: DESC
+
+  - name: idx_watch_percentage
+    columns: [watch_percentage]
+
+  - name: idx_watch_user_video_completed
+    columns: [user_id, video_id, is_completed]
+    description: "Composite index for ALS recommendations query"
+
+constraints:
+  - name: watch_history_user_id_video_id_key
+    type: unique
+    columns: [user_id, video_id]
+
+  - name: fk_watch_user
+    type: foreign_key
+    columns: [user_id]
+    references: user_profiles(id)
+
+  - name: fk_watch_video
+    type: foreign_key
+    columns: [video_id]
+    references: videos(id)
+

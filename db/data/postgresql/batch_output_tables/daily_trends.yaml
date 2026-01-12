@@ -1,0 +1,169 @@
+schema_definitions:
+  - column: id
+    type: serial
+    description: primary key
+
+  - column: video_id
+    type: integer
+    description: foreign key to videos table
+
+  - column: date
+    type: date
+    default: CURRENT_DATE
+    description: the date for which these trends are calculated
+
+  - column: total_views
+    type: integer
+    default: 0
+    description: total number of views on this date
+
+  - column: total_likes
+    type: integer
+    default: 0
+    description: total number of likes on this date
+
+  - column: total_dislikes
+    type: integer
+    default: 0
+    description: total number of dislikes on this date
+
+  - column: total_comments
+    type: integer
+    default: 0
+    description: total number of comments on this date
+
+  - column: total_completes
+    type: integer
+    default: 0
+    description: total number of users who completed watching
+
+  - column: unique_viewers
+    type: integer
+    default: 0
+    description: count of distinct users who watched
+
+  - column: avg_watch_percentage
+    type: decimal(5,2)
+    default: 0
+    description: average percentage of video watched
+
+  - column: completion_rate
+    type: decimal(5,2)
+    default: 0
+    description: percentage of viewers who completed the video
+
+  - column: engagement_rate
+    type: decimal(5,4)
+    default: 0
+    description: (likes + comments) / views
+
+  - column: views_velocity
+    type: decimal(5,2)
+    default: 1.0
+    description: ratio of today's views to yesterday's views (>1 means growing)
+
+  - column: likes_velocity
+    type: decimal(5,2)
+    default: 1.0
+    description: ratio of today's likes to yesterday's likes
+
+  - column: daily_trend_score
+    type: decimal(10,4)
+    default: 0
+    description: weighted composite score for trending
+
+  - column: calculated_at
+    type: timestamp
+    description: when this row was calculated
+
+daily_trends_examples:
+  - id: 1
+    video_id: 456
+    date: "2025-12-01"
+    total_views: 15000
+    total_likes: 1200
+    total_dislikes: 45
+    total_comments: 320
+    total_completes: 8500
+    unique_viewers: 12350
+    avg_watch_percentage: 72.50
+    completion_rate: 56.67
+    engagement_rate: 0.1013
+    views_velocity: 2.30
+    likes_velocity: 1.85
+    daily_trend_score: 87.5432
+    calculated_at: "2025-12-02T03:15:00Z"
+
+  - id: 2
+    video_id: 789
+    date: "2025-12-01"
+    total_views: 5600
+    total_likes: 420
+    total_dislikes: 12
+    total_comments: 98
+    total_completes: 2800
+    unique_viewers: 4800
+    avg_watch_percentage: 55.30
+    completion_rate: 50.00
+    engagement_rate: 0.0925
+    views_velocity: 1.20
+    likes_velocity: 1.10
+    daily_trend_score: 62.1234
+    calculated_at: "2025-12-02T03:15:00Z"
+
+  - id: 3
+    video_id: 456
+    date: "2025-12-02"
+    total_views: 34500
+    total_likes: 2800
+    total_dislikes: 92
+    total_comments: 580
+    total_completes: 19500
+    unique_viewers: 28000
+    avg_watch_percentage: 75.20
+    completion_rate: 56.52
+    engagement_rate: 0.0980
+    views_velocity: 2.30
+    likes_velocity: 2.33
+    daily_trend_score: 92.8765
+    calculated_at: "2025-12-03T03:15:00Z"
+
+indexes:
+  - name: idx_daily_trends_video_date
+    columns: [video_id, date]
+    order: DESC
+
+  - name: idx_daily_trends_date
+    columns: [date]
+    order: DESC
+
+  - name: idx_daily_trends_score
+    columns: [date, daily_trend_score]
+    order: DESC
+
+  - name: idx_daily_trends_trending_page
+    columns: [date, daily_trend_score, video_id]
+    order: DESC
+
+constraints:
+  - name: daily_trends_video_id_date_key
+    type: unique
+    columns: [video_id, date]
+
+  - name: fk_daily_trends_video
+    type: foreign_key
+    columns: [video_id]
+    references: videos(id)
+
+trend_score_formula: |
+  daily_trend_score = (
+      0.25 x normalized_views +
+      0.20 x normalized_likes +
+      0.15 x completion_rate +
+      0.15 x engagement_rate +
+      0.10 x avg_watch_percentage +
+      0.10 x views_velocity +
+      0.05 x freshness_bonus
+  ) x 100
+
+update_frequency: "Daily at 03:00 via Spark Batch Job"

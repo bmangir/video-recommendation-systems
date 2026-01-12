@@ -1,0 +1,84 @@
+schema_definitions:
+  - column: id
+    type: serial
+    description: primary key
+
+  - column: user_id
+    type: integer
+    description: foreign key to user_profiles
+
+  - column: video_id
+    type: integer
+    description: foreign key to videos
+
+  - column: like_type
+    type: smallint
+    default: 1
+    description: 1 for like, -1 for dislike
+
+  - column: created_at
+    type: timestamp
+    description: when the like/dislike was created
+
+user_likes_examples:
+  - id: 1
+    user_id: 123
+    video_id: 456
+    like_type: 1
+    created_at: "2025-12-01T14:05:30Z"
+
+  - id: 2
+    user_id: 123
+    video_id: 789
+    like_type: -1
+    created_at: "2025-12-01T15:10:00Z"
+
+  - id: 3
+    user_id: 456
+    video_id: 456
+    like_type: 1
+    created_at: "2025-12-01T16:20:00Z"
+
+  - id: 4
+    user_id: 789
+    video_id: 123
+    like_type: 1
+    created_at: "2025-12-02T09:00:00Z"
+
+indexes:
+  - name: idx_likes_user
+    columns: [user_id]
+
+  - name: idx_likes_video
+    columns: [video_id]
+
+  - name: idx_likes_type
+    columns: [video_id, like_type]
+
+  - name: idx_likes_only
+    columns: [video_id]
+    condition: "WHERE like_type = 1"
+
+  - name: idx_dislikes_only
+    columns: [video_id]
+    condition: "WHERE like_type = -1"
+
+constraints:
+  - name: user_likes_user_id_video_id_key
+    type: unique
+    columns: [user_id, video_id]
+
+  - name: chk_like_type
+    type: check
+    condition: "like_type IN (1, -1)"
+
+  - name: fk_likes_user
+    type: foreign_key
+    columns: [user_id]
+    references: user_profiles(id)
+
+  - name: fk_likes_video
+    type: foreign_key
+    columns: [video_id]
+    references: videos(id)
+
