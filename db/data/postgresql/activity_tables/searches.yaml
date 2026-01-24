@@ -1,0 +1,91 @@
+schema_definitions:
+  - column: id
+    type: serial
+    description: Primary key, unique identifier for each search event
+
+  - column: user_id
+    type: integer
+    nullable: false
+    description: Foreign key to user_profiles - who performed the search
+
+  - column: query
+    type: text
+    nullable: true
+    description: >
+      The search query string entered by user.
+      Can be null for empty/cleared searches.
+      Should be stored lowercase and trimmed for consistency.
+
+  - column: searched_at
+    type: timestamp
+    default: CURRENT_TIMESTAMP
+    description: When the search was performed (UTC)
+
+searches_examples:
+  - id: 1
+    user_id: 123
+    query: "kubernetes tutorial"
+    searched_at: "2025-12-02T14:30:00Z"
+
+  - id: 2
+    user_id: 123
+    query: "docker compose networking"
+    searched_at: "2025-12-02T14:35:00Z"
+
+  - id: 3
+    user_id: 123
+    query: "react hooks useEffect"
+    searched_at: "2025-12-02T15:00:00Z"
+
+  - id: 4
+    user_id: 456
+    query: "python machine learning"
+    searched_at: "2025-12-02T10:00:00Z"
+
+  - id: 5
+    user_id: 456
+    query: "tensorflow vs pytorch"
+    searched_at: "2025-12-02T10:15:00Z"
+
+  - id: 6
+    user_id: 789
+    query: null  # User opened search but didn't type anything
+    searched_at: "2025-12-02T09:00:00Z"
+
+  - id: 7
+    user_id: 123
+    query: "kubernetes"  # Shorter follow-up search
+    searched_at: "2025-12-02T15:30:00Z"
+
+indexes:
+  - name: idx_search_user
+    columns: [user_id]
+    description: Fast lookup of all searches by a specific user
+
+  - name: idx_user_search_time
+    columns: [user_id, searched_at]
+    order: DESC
+    description: >
+      Composite index for fetching user's recent searches.
+      Used by: user_realtime_profile.recent_activity.recently_searched
+
+  - name: idx_search_time
+    columns: [searched_at]
+    order: DESC
+    description: For time-range queries (trending searches in last hour/day)
+
+  - name: idx_search_query
+    columns: [query]
+    type: GIN
+    using: gin_trgm_ops
+    description: >
+      Trigram index for fast LIKE/ILIKE searches (autocomplete).
+      Requires: CREATE EXTENSION pg_trgm;
+
+constraints:
+  - name: fk_search_user
+    type: foreign_key
+    columns: [user_id]
+    references: user_profiles(id)
+    on_delete: CASCADE
+    description: Delete search history when user is deleted
