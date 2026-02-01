@@ -1,6 +1,3 @@
-# ALS-based Collaborative Filtering for Video Recommendations
-# Uses Matrix Factorization to generate personalized video recommendations
-
 from pyspark.sql import SparkSession, DataFrame, Window
 from pyspark.sql import functions as F
 from pyspark.sql.types import ArrayType, IntegerType, FloatType, StructType, StructField
@@ -15,17 +12,6 @@ import spark.utility as utility
 import config
 
 """
-ALS Recommendation Pipeline
-
-Input Tables:
-    - watch_history: user viewing behavior
-    - user_likes: like/dislike interactions
-    - comments: comment interactions
-    - videos: video metadata
-
-Output Table:
-    - als_recommendations: personalized recommendations per user
-
 Implicit Rating Formula:
     rating = 1.0 * view_count
            + 2.0 * watch_ratio (if > 50%)
@@ -35,8 +21,6 @@ Implicit Rating Formula:
            - 4.0 * is_disliked
            + 5.0 * has_commented
 """
-
-# PART 1: CONFIGURATION
 
 MODEL_VERSION = f"als_v1.0_{datetime.now().strftime('%Y%m%d')}"
 NUM_RECOMMENDATIONS = 20  # Top N recommendations per user
@@ -53,8 +37,6 @@ ALS_PARAMS = {
     "seed": 44
 }
 
-
-# PART 2: MAIN PIPELINE
 
 def run_pipeline(spark: SparkSession, save_model: bool = True):
     """
@@ -91,8 +73,7 @@ def run_pipeline(spark: SparkSession, save_model: bool = True):
     
     # Save
     save_recommendations(recommendations_df)
-    
-    # Cleanup
+
     rating_df.unpersist()
     train_df.unpersist()
     test_df.unpersist()
@@ -145,15 +126,6 @@ def prepare_features(
             watch_history_df: DataFrame) -> DataFrame:
     """
     Prepare features and calculate implicit ratings for each user-video pair.
-    
-    Implicit Rating Formula:
-        rating = 1.0 * view_count
-               + 2.0 * watch_ratio (normalized to 0-1)
-               + 3.0 * is_completed
-               + 3.5 * rewatch_count
-               + 4.0 * is_liked
-               - 4.0 * is_disliked
-               + 5.0 * has_commented
     """
     
     # Comment features: has_commented flag (0 or 1)
