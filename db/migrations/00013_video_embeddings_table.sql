@@ -46,31 +46,31 @@ CREATE INDEX idx_video_emb_cleanup ON video_embeddings(is_latest, calculated_at)
 CREATE INDEX idx_video_emb_calculated ON video_embeddings(calculated_at DESC);
 
 -- Function to calculate cosine similarity between two embeddings
-CREATE OR REPLACE FUNCTION cosine_similarity(vec1 DOUBLE PRECISION[], vec2 DOUBLE PRECISION[])
+CREATE OR REPLACE FUNCTION cosine_similarity(a DOUBLE PRECISION[], b DOUBLE PRECISION[])
 RETURNS DOUBLE PRECISION AS $$
 DECLARE
     dot_product DOUBLE PRECISION := 0;
-    norm1 DOUBLE PRECISION := 0;
-    norm2 DOUBLE PRECISION := 0;
+    norm_a DOUBLE PRECISION := 0;
+    norm_b DOUBLE PRECISION := 0;
     i INTEGER;
 BEGIN
-    IF array_length(vec1, 1) != array_length(vec2, 1) THEN
-        RAISE EXCEPTION 'Vector dimensions must match';
+    IF array_length(a, 1) != array_length(b, 1) THEN
+        RETURN NULL;
     END IF;
 
-    FOR i IN 1..array_length(vec1, 1) LOOP
-        dot_product := dot_product + (vec1[i] * vec2[i]);
-        norm1 := norm1 + (vec1[i] * vec1[i]);
-        norm2 := norm2 + (vec2[i] * vec2[i]);
+    FOR i IN 1..array_length(a, 1) LOOP
+        dot_product := dot_product + (a[i] * b[i]);
+        norm_a := norm_a + (a[i] * a[i]);
+        norm_b := norm_b + (b[i] * b[i]);
     END LOOP;
 
-    IF norm1 = 0 OR norm2 = 0 THEN
+    IF norm_a = 0 OR norm_b = 0 THEN
         RETURN 0;
     END IF;
 
-    RETURN dot_product / (sqrt(norm1) * sqrt(norm2));
+    RETURN dot_product / (sqrt(norm_a) * sqrt(norm_b));
 END;
-$$ LANGUAGE plpgsql IMMUTABLE;
+$$ LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE;
 
 -- Function to find similar videos by embedding
 CREATE OR REPLACE FUNCTION find_similar_videos(
