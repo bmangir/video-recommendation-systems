@@ -1,0 +1,139 @@
+schema_definitions:
+  - column: user_id
+    type: integer
+    primary_key: true
+    description: Foreign key to user_profiles, unique per user
+
+  - column: user_embedding
+    type: double precision[]
+    description: Combined user embedding (weighted average of watch, like, search signals)
+
+  - column: watch_history_embedding
+    type: double precision[]
+    nullable: true
+    description: Average embedding of last N watched videos
+
+  - column: liked_videos_embedding
+    type: double precision[]
+    nullable: true
+    description: Average embedding of liked videos
+
+  - column: search_query_embedding
+    type: double precision[]
+    nullable: true
+    description: BERT embedding of concatenated recent search queries
+
+  - column: videos_watched_count
+    type: integer
+    default: 0
+    description: Number of videos used to compute watch_history_embedding
+
+  - column: videos_liked_count
+    type: integer
+    default: 0
+    description: Number of videos used to compute liked_videos_embedding
+
+  - column: searches_count
+    type: integer
+    default: 0
+    description: Number of search queries used to compute search_query_embedding
+
+  - column: embedding_dim
+    type: integer
+    default: 384
+    description: Dimension of embeddings (384 for MiniLM, 768 for MPNet)
+
+  - column: model_version
+    type: varchar(50)
+    description: Version identifier for the embedding model
+
+  - column: model_params
+    type: jsonb
+    nullable: true
+    description: Model hyperparameters and weights used
+
+  - column: calculated_at
+    type: timestamp
+    description: When this embedding was first calculated
+
+  - column: updated_at
+    type: timestamp
+    description: When this embedding was last updated
+
+user_embeddings_examples:
+  - user_id: 123
+    user_embedding: [0.234, -0.567, 0.891, ...]  # 384 dimensions
+    watch_history_embedding: [0.123, -0.456, 0.789, ...]
+    liked_videos_embedding: [0.345, -0.678, 0.912, ...]
+    search_query_embedding: [0.456, -0.789, 0.123, ...]
+    videos_watched_count: 47
+    videos_liked_count: 12
+    searches_count: 8
+    embedding_dim: 384
+    model_version: "user_emb_v1.0_bert"
+    model_params: {"watch_weight": 0.5, "like_weight": 0.3, "search_weight": 0.2, "bert_model": "all-MiniLM-L6-v2"}
+    calculated_at: "2025-12-02T04:00:00Z"
+    updated_at: "2025-12-02T04:00:00Z"
+
+  - user_id: 456
+    user_embedding: [0.567, -0.234, 0.678, ...]
+    watch_history_embedding: [0.678, -0.123, 0.456, ...]
+    liked_videos_embedding: null  # User hasn't liked any videos
+    search_query_embedding: [0.789, -0.234, 0.567, ...]
+    videos_watched_count: 15
+    videos_liked_count: 0
+    searches_count: 3
+    embedding_dim: 384
+    model_version: "user_emb_v1.0_bert"
+    model_params: {"watch_weight": 0.5, "like_weight": 0.3, "search_weight": 0.2, "bert_model": "all-MiniLM-L6-v2"}
+    calculated_at: "2025-12-02T04:00:00Z"
+    updated_at: "2025-12-02T04:00:00Z"
+
+indexes:
+  - name: idx_user_emb_updated
+    columns: [updated_at]
+    order: DESC
+
+  - name: idx_user_emb_model
+    columns: [model_version]
+
+constraints:
+  - name: fk_user_emb_user
+    type: foreign_key
+    columns: [user_id]
+    references: user_profiles(id)
+    on_delete: CASCADE
+
+embedding_weights:
+  watch_history:
+    weight: 0.5
+    description: Most important signal - what user actually watches
+    input: Last 50 watched video embeddings, weighted by recency
+
+  liked_videos:
+    weight: 0.3
+    description: Strong positive signal - explicit preference
+    input: All liked video embeddings
+
+  search_queries:
+    weight: 0.2
+    description: Intent signal - what user is looking for
+    input: BERT encoding of last 10 search queries concatenated
+
+computation_strategy:
+  watch_history:
+    method: "Weighted average of video embeddings"
+    recency_decay: "exponential, lambda=0.1"
+    max_videos: 50
+
+  liked_videos:
+    method: "Simple average of video embeddings"
+    max_videos: null  # Use all likes
+
+  search_queries:
+    method: "BERT encode concatenated queries"
+    max_queries: 10
+    separator: " [SEP] "
+
+update_frequency: "Daily at 04:00 via Spark Batch Job (after video_embeddings)"
+
