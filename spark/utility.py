@@ -5,9 +5,14 @@ from pyspark.sql import SparkSession, DataFrame
 from config import MONGO_URI, PG_DB_URL, PG_USER, PG_PW
 
 
-def create_spark_session(app_name) -> SparkSession:
+def create_spark_session(app_name, memory_intensive: bool = False) -> SparkSession:
+    """
+    Args:
+        app_name: Application name
+        memory_intensive: If True, applies memory optimization settings for ML workloads
+    """
     try:
-        spark = SparkSession \
+        builder = SparkSession \
             .builder \
             .appName(app_name) \
             .config("spark.jars.packages",
@@ -17,8 +22,19 @@ def create_spark_session(app_name) -> SparkSession:
             .config("spark.mongodb.write.connection.uri", MONGO_URI) \
             .config("spark.sql.shuffle.partitions", "50") \
             .config("spark.sql.execution.arrow.pyspark.enabled", "true") \
-            .config("spark.mongodb.read.readPreference.name", "secondaryPreferred") \
-            .getOrCreate()
+            .config("spark.mongodb.read.readPreference.name", "secondaryPreferred")
+        
+        # Memory optimization for ML workloads (BERT, etc.)
+        if memory_intensive:
+            builder = builder \
+                .config("spark.driver.memory", "4g") \
+                .config("spark.executor.memory", "4g") \
+                .config("spark.python.worker.memory", "2g") \
+                .config("spark.sql.execution.arrow.maxRecordsPerBatch", "1000") \
+                .config("spark.sql.adaptive.enabled", "true") \
+                .config("spark.sql.adaptive.coalescePartitions.enabled", "true")
+        
+        spark = builder.getOrCreate()
 
     except Exception as e:
         raise RuntimeError("SparkSession oluşturulamadı") from e
