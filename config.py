@@ -24,5 +24,5 @@ CONFLUENT_API_SECRET = os.getenv("CONFLUENT_API_SECRET")
 CONFLUENT_INTERACTION_TOPIC = os.getenv("CONFLUENT_INTERACTION_TOPIC")
 CONFLUENT_CLIENT_ID = os.getenv("CONFLUENT_CLIENT_ID")
 
-connector = PostgresConnector()
+connector = PostgresConnector(PG_DB_NAME, PG_USER, PG_PW, PG_PORT)
 conn = connector.create_connection()
