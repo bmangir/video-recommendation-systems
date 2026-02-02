@@ -1,6 +1,8 @@
 import os
 from dotenv import load_dotenv
 
+from db_connector.postgres_connector import PostgresConnector
+
 load_dotenv()
 
 MONGO_URI = os.getenv("MONGODB_URI")
@@ -21,3 +23,6 @@ CONFLUENT_API_KEY = os.getenv("CONFLUENT_API_KEY")
 CONFLUENT_API_SECRET = os.getenv("CONFLUENT_API_SECRET")
 CONFLUENT_INTERACTION_TOPIC = os.getenv("CONFLUENT_INTERACTION_TOPIC")
 CONFLUENT_CLIENT_ID = os.getenv("CONFLUENT_CLIENT_ID")
+
+connector = PostgresConnector()
+conn = connector.create_connection()

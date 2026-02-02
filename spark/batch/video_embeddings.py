@@ -93,22 +93,18 @@ def run_pipeline(spark: SparkSession):
 def deactivate_old_embeddings():
     """Set is_latest=false for all existing embeddings before inserting new ones."""
 
-    connector = PostgresConnector()
-    conn = connector.create_connection()
     try:
-        with conn.cursor() as cur:
+        with config.conn.cursor() as cur:
             cur.execute(f"""
                 UPDATE {config.BATCH_OUTPUT_SCHEMA}.video_embeddings
                 SET is_latest = false
                 WHERE is_latest = true
             """)
-        conn.commit()
+        config.conn.commit()
         print("Deactivated old embeddings")
     except Exception as e:
-        conn.rollback()
+        config.conn.rollback()
         raise e
-    finally:
-        conn.close()
 
 
 def trigger_calculate_video_stats(spark: SparkSession):
