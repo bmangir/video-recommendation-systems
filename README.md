@@ -26,7 +26,7 @@ A hybrid video recommendation system combining **Two-Tower Neural Networks**, **
 **Schemas:**
 - `core` - User profiles, videos, categories
 - `activity` - Watch history, likes, comments, searches, subscriptions
-- `batch_output` - Embeddings, recommendations, trends
+- `output` - Embeddings, recommendations, trends
 
 ### MongoDB Collections
 
@@ -107,6 +107,21 @@ All batch jobs read from PostgreSQL, process with Spark, and write results back 
 ![Real-Time Flow](architectures_and_flows/realtime/realtime_flow.png)
 
 User events flow from Frontend → Backend → Kafka → Spark Streaming → MongoDB.
+
+### Storage Architecture Note
+
+> **Local Development vs Production:**
+> 
+> In a production environment, raw event data and intermediate processing results would typically be stored in **HDFS (Hadoop Distributed File System)** for:
+> - Scalable storage of large event streams
+> - Fault-tolerant data persistence
+> - Efficient batch processing with Spark
+> 
+> However, this project uses **PostgreSQL** as the primary storage for local development simplicity. The architecture can be easily adapted to HDFS by modifying the Spark read/write configurations in stream jobs.
+> 
+> **Production path:** `Kafka → Spark Streaming → HDFS (raw) → Spark Batch → PostgreSQL/MongoDB (serving)`
+> 
+> **Local path:** `Kafka → Spark Streaming → PostgreSQL → MongoDB (serving)`
 
 ### Kafka Event Schema
 
@@ -219,6 +234,22 @@ VideoRecommendationSystems/
 pip install pyspark sentence-transformers pymongo psycopg2-binary python-dotenv
 ```
 
+### Database Setup
+
+Before running migrations, create the required schemas:
+
+```sql
+-- Create schemas
+CREATE SCHEMA IF NOT EXISTS core;
+CREATE SCHEMA IF NOT EXISTS activity;
+CREATE SCHEMA IF NOT EXISTS output;
+
+-- Grant permissions (if needed)
+GRANT ALL ON SCHEMA core TO your_user;
+GRANT ALL ON SCHEMA activity TO your_user;
+GRANT ALL ON SCHEMA output TO your_user;
+```
+
 ### Environment Variables
 
 ```env
@@ -230,7 +261,7 @@ PG_DB_NAME=video_rec
 PG_PORT=5432
 PG_DB_CORE_SCHEMA=core
 PG_DB_ACT_SCHEMA=activity
-PG_DB_OUTPUT_SCHEMA=batch_output
+PG_DB_OUTPUT_SCHEMA=output
 
 # MongoDB
 MONGODB_URI=mongodb://localhost:27017
@@ -252,3 +283,18 @@ python -m spark.batch.als_recommendations
 python -m spark.batch.daily_trends
 python -m spark.batch.mongodb_sync
 ```
+
+---
+
+## Future Enhancements
+
+### Planned Improvements
+
+- **Advanced AI Embeddings**: Replace current Sentence-BERT with more sophisticated models:
+  - Fine-tuned domain-specific transformers for video content
+  - Multimodal embeddings (video frames + audio + text)
+  - Contrastive learning for user-video similarity
+  
+- **Vector Database Integration**: Migrate embeddings to dedicated vector databases (Pinecone or pgvector) for faster similarity search at scale
+
+- **Real-time Personalization**: Implement online learning to update user embeddings in real-time based on streaming events
