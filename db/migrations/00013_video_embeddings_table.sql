@@ -1,11 +1,11 @@
 DROP INDEX IF EXISTS idx_video_emb_model_version;
 DROP INDEX IF EXISTS idx_video_emb_latest;
 DROP INDEX IF EXISTS idx_video_emb_calculated;
-DROP TABLE IF EXISTS video_embeddings CASCADE;
+DROP TABLE IF EXISTS output.video_embeddings CASCADE;
 
-CREATE TABLE video_embeddings (
+CREATE TABLE output.video_embeddings (
     id SERIAL PRIMARY KEY,
-    video_id INTEGER NOT NULL REFERENCES videos(id),
+    video_id INTEGER NOT NULL REFERENCES core.videos(id),
 
     -- Embedding vectors
     content_embedding DOUBLE PRECISION[],     -- From title, tags, description (text-based)
@@ -33,17 +33,17 @@ CREATE TABLE video_embeddings (
 );
 
 -- Get latest embedding for a video
-CREATE INDEX idx_video_emb_latest ON video_embeddings(video_id)
+CREATE INDEX idx_video_emb_latest ON output.video_embeddings(video_id)
     WHERE is_latest = true;
 
 -- Get embeddings by model version
-CREATE INDEX idx_video_emb_model ON video_embeddings(model_version, calculated_at DESC);
+CREATE INDEX idx_video_emb_model ON output.video_embeddings(model_version, calculated_at DESC);
 
 -- Cleanup old embeddings
-CREATE INDEX idx_video_emb_cleanup ON video_embeddings(is_latest, calculated_at);
+CREATE INDEX idx_video_emb_cleanup ON output.video_embeddings(is_latest, calculated_at);
 
 -- For batch updates
-CREATE INDEX idx_video_emb_calculated ON video_embeddings(calculated_at DESC);
+CREATE INDEX idx_video_emb_calculated ON output.video_embeddings(calculated_at DESC);
 
 -- Function to calculate cosine similarity between two embeddings
 CREATE OR REPLACE FUNCTION cosine_similarity(a DOUBLE PRECISION[], b DOUBLE PRECISION[])
@@ -87,7 +87,7 @@ DECLARE
 BEGIN
     -- Get target video's embedding
     EXECUTE format(
-        'SELECT %I FROM video_embeddings WHERE video_id = $1 AND is_latest = true',
+        'SELECT %I FROM output.video_embeddings WHERE video_id = $1 AND is_latest = true',
         p_embedding_type || '_embedding'
     ) INTO target_embedding USING p_video_id;
 
@@ -107,10 +107,10 @@ BEGIN
                 ELSE ve.combined_embedding
             END
         ) AS similarity_score
-    FROM video_embeddings ve
+    FROM output.video_embeddings ve
     WHERE ve.video_id != p_video_id
       AND ve.is_latest = true
-    ORDER BY similarity_score DESC
+    ORDER BY 2 DESC
     LIMIT p_limit;
 END;
 $$ LANGUAGE plpgsql;
@@ -123,10 +123,10 @@ DECLARE
 BEGIN
     WITH latest AS (
         SELECT DISTINCT ON (video_id) id
-        FROM video_embeddings
+        FROM output.video_embeddings
         ORDER BY video_id, calculated_at DESC
     )
-    UPDATE video_embeddings
+    UPDATE output.video_embeddings
     SET is_latest = false
     WHERE id NOT IN (SELECT id FROM latest)
       AND is_latest = true;
@@ -136,9 +136,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-COMMENT ON TABLE video_embeddings IS 'Vector embeddings for videos, used for similarity search and content-based recommendations.';
-COMMENT ON COLUMN video_embeddings.content_embedding IS 'Text-based embedding from title, description, tags (e.g., TF-IDF, Word2Vec, BERT)';
-COMMENT ON COLUMN video_embeddings.behavioral_embedding IS 'Collaborative filtering embedding from ALS item factors';
-COMMENT ON COLUMN video_embeddings.combined_embedding IS 'Hybrid embedding combining content and behavioral signals';
+COMMENT ON TABLE output.video_embeddings IS 'Vector embeddings for videos, used for similarity search and content-based recommendations.';
+COMMENT ON COLUMN output.video_embeddings.content_embedding IS 'Text-based embedding from title, description, tags (e.g., TF-IDF, Word2Vec, BERT)';
+COMMENT ON COLUMN output.video_embeddings.behavioral_embedding IS 'Collaborative filtering embedding from ALS item factors';
+COMMENT ON COLUMN output.video_embeddings.combined_embedding IS 'Hybrid embedding combining content and behavioral signals';
 COMMENT ON FUNCTION cosine_similarity IS 'Calculates cosine similarity between two vectors. Returns value between -1 and 1.';
 COMMENT ON FUNCTION find_similar_videos IS 'Finds top N similar videos by embedding similarity.';

@@ -2,13 +2,13 @@ DROP INDEX IF EXISTS idx_comments_video;
 DROP INDEX IF EXISTS idx_comments_user;
 DROP INDEX IF EXISTS idx_comments_parent;
 DROP INDEX IF EXISTS idx_comments_video_time;
-DROP TABLE IF EXISTS comments CASCADE;
+DROP TABLE IF EXISTS activity.comments CASCADE;
 
-CREATE TABLE comments (
+CREATE TABLE activity.comments (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES user_profiles(id),
-    video_id INTEGER NOT NULL REFERENCES videos(id),
-    parent_id INTEGER REFERENCES comments(id),
+    user_id INTEGER NOT NULL REFERENCES core.user_profiles(id),
+    video_id INTEGER NOT NULL REFERENCES core.videos(id),
+    parent_id INTEGER REFERENCES activity.comments(id),
     content TEXT NOT NULL,
     like_count INTEGER DEFAULT 0,
     reply_count INTEGER DEFAULT 0,
@@ -21,20 +21,20 @@ CREATE TABLE comments (
     CONSTRAINT chk_comment_status CHECK (status IN ('active', 'deleted', 'hidden', 'spam'))
 );
 
-CREATE INDEX idx_comments_video ON comments(video_id);
-CREATE INDEX idx_comments_user ON comments(user_id);
-CREATE INDEX idx_comments_parent ON comments(parent_id);
-CREATE INDEX idx_comments_video_time ON comments(video_id, created_at DESC);
+CREATE INDEX idx_comments_video ON activity.comments(video_id);
+CREATE INDEX idx_comments_user ON activity.comments(user_id);
+CREATE INDEX idx_comments_parent ON activity.comments(parent_id);
+CREATE INDEX idx_comments_video_time ON activity.comments(video_id, created_at DESC);
 
 -- Partial index for active comments only
-CREATE INDEX idx_comments_active ON comments(video_id, created_at DESC) WHERE status = 'active';
+CREATE INDEX idx_comments_active ON activity.comments(video_id, created_at DESC) WHERE status = 'active';
 
 -- Trigger to update reply_count on parent
 CREATE OR REPLACE FUNCTION update_parent_reply_count()
 RETURNS TRIGGER AS $$
 BEGIN
     IF NEW.parent_id IS NOT NULL THEN
-        UPDATE comments
+        UPDATE activity.comments
         SET reply_count = reply_count + 1
         WHERE id = NEW.parent_id;
     END IF;
@@ -43,7 +43,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trigger_update_reply_count
-    AFTER INSERT ON comments
+    AFTER INSERT ON activity.comments
     FOR EACH ROW
     EXECUTE FUNCTION update_parent_reply_count();
 
@@ -57,7 +57,6 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trigger_comments_updated_at
-    BEFORE UPDATE ON comments
+    BEFORE UPDATE ON activity.comments
     FOR EACH ROW
     EXECUTE FUNCTION update_comments_updated_at();
-

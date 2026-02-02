@@ -1,9 +1,9 @@
 DROP INDEX IF EXISTS idx_video_stats_trending;
 DROP INDEX IF EXISTS idx_video_stats_engagement;
-DROP TABLE IF EXISTS video_stats CASCADE;
+DROP TABLE IF EXISTS activity.video_stats CASCADE;
 
-CREATE TABLE video_stats (
-    video_id INTEGER PRIMARY KEY REFERENCES videos(id),
+CREATE TABLE activity.video_stats (
+    video_id INTEGER PRIMARY KEY REFERENCES core.videos(id),
 
     -- Raw counts
     total_views INTEGER DEFAULT 0,
@@ -26,9 +26,9 @@ CREATE TABLE video_stats (
     last_calculated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_video_stats_trending ON video_stats(trending_score DESC);
-CREATE INDEX idx_video_stats_engagement ON video_stats(engagement_score DESC);
-CREATE INDEX idx_video_stats_views ON video_stats(total_views DESC);
+CREATE INDEX idx_video_stats_trending ON activity.video_stats(trending_score DESC);
+CREATE INDEX idx_video_stats_engagement ON activity.video_stats(engagement_score DESC);
+CREATE INDEX idx_video_stats_views ON activity.video_stats(total_views DESC);
 
 -- Function to calculate and update video stats (called by batch job)
 CREATE OR REPLACE FUNCTION calculate_video_stats(p_video_id INTEGER)
@@ -50,7 +50,7 @@ BEGIN
            AVG(watch_percentage),
            (COUNT(*) FILTER (WHERE is_completed = true)::DECIMAL / NULLIF(COUNT(*), 0)) * 100
     INTO v_total_views, v_unique_viewers, v_total_watch_time, v_avg_watch_pct, v_completion_rate
-    FROM watch_history
+    FROM activity.watch_history
     WHERE video_id = p_video_id;
 
     -- Get like/dislike counts
@@ -58,12 +58,12 @@ BEGIN
         COUNT(*) FILTER (WHERE like_type = 1),
         COUNT(*) FILTER (WHERE like_type = -1)
     INTO v_total_likes, v_total_dislikes
-    FROM user_likes
+    FROM activity.user_likes
     WHERE video_id = p_video_id;
 
     -- Get comment count
     SELECT COUNT(*) INTO v_total_comments
-    FROM comments
+    FROM activity.comments
     WHERE video_id = p_video_id AND status = 'active';
 
     -- Calculate engagement score
@@ -81,7 +81,7 @@ BEGIN
     );
 
     -- Upsert stats
-    INSERT INTO video_stats (
+    INSERT INTO activity.video_stats (
         video_id, total_views, total_likes, total_dislikes, total_comments,
         unique_viewers, total_watch_time_seconds, avg_watch_percentage,
         completion_rate, engagement_score, trending_score, last_calculated_at

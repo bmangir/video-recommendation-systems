@@ -4,10 +4,10 @@
 
 DROP INDEX IF EXISTS idx_user_emb_updated;
 DROP INDEX IF EXISTS idx_user_emb_model;
-DROP TABLE IF EXISTS user_embeddings CASCADE;
+DROP TABLE IF EXISTS output.user_embeddings CASCADE;
 
-CREATE TABLE user_embeddings (
-    user_id INTEGER PRIMARY KEY REFERENCES user_profiles(id) ON DELETE CASCADE,
+CREATE TABLE output.user_embeddings (
+    user_id INTEGER PRIMARY KEY REFERENCES core.user_profiles(id) ON DELETE CASCADE,
 
     -- Weighted combination of all signals
     user_embedding DOUBLE PRECISION[],
@@ -32,8 +32,8 @@ CREATE TABLE user_embeddings (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_user_emb_updated ON user_embeddings(updated_at DESC);
-CREATE INDEX idx_user_emb_model ON user_embeddings(model_version);
+CREATE INDEX idx_user_emb_updated ON output.user_embeddings(updated_at DESC);
+CREATE INDEX idx_user_emb_model ON output.user_embeddings(model_version);
 
 -- Function to find recommended videos for a user using cosine similarity
 CREATE OR REPLACE FUNCTION find_videos_for_user(
@@ -49,9 +49,9 @@ DECLARE
     target_embedding DOUBLE PRECISION[];
 BEGIN
     -- Get user's embedding
-    SELECT user_embedding INTO target_embedding
-    FROM user_embeddings
-    WHERE user_id = p_user_id;
+    SELECT ue.user_embedding INTO target_embedding
+    FROM output.user_embeddings ue
+    WHERE ue.user_id = p_user_id;
 
     IF target_embedding IS NULL THEN
         RAISE EXCEPTION 'No embedding found for user_id %', p_user_id;
@@ -63,11 +63,11 @@ BEGIN
         SELECT
             ve.video_id,
             cosine_similarity(target_embedding, ve.combined_embedding) AS similarity_score
-        FROM video_embeddings ve
+        FROM output.video_embeddings ve
         WHERE ve.is_latest = true
           AND ve.video_id NOT IN (
               SELECT wh.video_id 
-              FROM watch_history wh 
+              FROM activity.watch_history wh 
               WHERE wh.user_id = p_user_id
           )
         ORDER BY similarity_score DESC
@@ -77,7 +77,7 @@ BEGIN
         SELECT
             ve.video_id,
             cosine_similarity(target_embedding, ve.combined_embedding) AS similarity_score
-        FROM video_embeddings ve
+        FROM output.video_embeddings ve
         WHERE ve.is_latest = true
         ORDER BY similarity_score DESC
         LIMIT p_limit;
@@ -85,7 +85,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Function to get blended recommendations from all sources
+-- Function to get blended recommendations from all sources (public schema)
 CREATE OR REPLACE FUNCTION get_blended_recommendations(
     p_user_id INTEGER,
     p_limit INTEGER DEFAULT 20,
@@ -107,16 +107,16 @@ BEGIN
     -- Content-based scores (Two-Tower)
     content_recs AS (
         SELECT 
-            f.video_id,
+            f.video_id AS vid,
             f.similarity_score AS score
         FROM find_videos_for_user(p_user_id, 100, true) f
     ),
     -- ALS collaborative filtering scores
     als_recs AS (
         SELECT 
-            unnest(r.recommended_video_ids) AS video_id,
+            unnest(r.recommended_video_ids) AS vid,
             unnest(r.scores)::DOUBLE PRECISION AS score
-        FROM als_recommendations r
+        FROM output.als_recommendations r
         WHERE r.user_id = p_user_id
           AND r.is_active = true
         ORDER BY r.generated_at DESC
@@ -125,55 +125,55 @@ BEGIN
     -- Trending scores
     trend_recs AS (
         SELECT 
-            t.video_id,
-            t.daily_trend_score / 100.0 AS score  -- Normalize to 0-1
-        FROM daily_trends t
+            t.video_id AS vid,
+            (t.daily_trend_score / 100.0)::DOUBLE PRECISION AS score  -- Normalize to 0-1
+        FROM output.daily_trends t
         ORDER BY t.daily_trend_score DESC
         LIMIT 100
     ),
     -- Combine all sources
     all_videos AS (
-        SELECT DISTINCT video_id FROM content_recs
+        SELECT DISTINCT vid FROM content_recs
         UNION
-        SELECT DISTINCT video_id FROM als_recs
+        SELECT DISTINCT vid FROM als_recs
         UNION
-        SELECT DISTINCT video_id FROM trend_recs
+        SELECT DISTINCT vid FROM trend_recs
     ),
     -- Calculate blended scores
     blended AS (
         SELECT 
-            av.video_id,
-            COALESCE(c.score, 0) AS content_score,
-            COALESCE(a.score, 0) AS als_score,
-            COALESCE(t.score, 0) AS trend_score,
+            av.vid,
+            COALESCE(c.score, 0) AS c_score,
+            COALESCE(a.score, 0) AS a_score,
+            COALESCE(t.score, 0) AS t_score,
             (
                 COALESCE(c.score, 0) * p_content_weight +
                 COALESCE(a.score, 0) * p_als_weight +
                 COALESCE(t.score, 0) * p_trend_weight
-            ) AS final_score,
+            ) AS f_score,
             CASE 
                 WHEN c.score IS NOT NULL AND a.score IS NOT NULL THEN 'hybrid'
                 WHEN c.score IS NOT NULL THEN 'content'
                 WHEN a.score IS NOT NULL THEN 'collaborative'
                 ELSE 'trending'
-            END AS source
+            END AS src
         FROM all_videos av
-        LEFT JOIN content_recs c ON av.video_id = c.video_id
-        LEFT JOIN als_recs a ON av.video_id = a.video_id
-        LEFT JOIN trend_recs t ON av.video_id = t.video_id
+        LEFT JOIN content_recs c ON av.vid = c.vid
+        LEFT JOIN als_recs a ON av.vid = a.vid
+        LEFT JOIN trend_recs t ON av.vid = t.vid
     )
     SELECT 
-        b.video_id,
-        b.final_score,
-        b.content_score,
-        b.als_score,
-        b.trend_score,
-        b.source::VARCHAR(20)
+        b.vid AS video_id,
+        b.f_score AS final_score,
+        b.c_score AS content_score,
+        b.a_score AS als_score,
+        b.t_score AS trend_score,
+        b.src::VARCHAR(20) AS source
     FROM blended b
-    WHERE b.video_id NOT IN (
-        SELECT wh.video_id FROM watch_history wh WHERE wh.user_id = p_user_id
+    WHERE b.vid NOT IN (
+        SELECT wh.video_id FROM activity.watch_history wh WHERE wh.user_id = p_user_id
     )
-    ORDER BY b.final_score DESC
+    ORDER BY b.f_score DESC
     LIMIT p_limit;
 END;
 $$ LANGUAGE plpgsql;
@@ -188,13 +188,14 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trg_user_embedding_updated
-    BEFORE UPDATE ON user_embeddings
+    BEFORE UPDATE ON output.user_embeddings
     FOR EACH ROW
     EXECUTE FUNCTION update_user_embedding_timestamp();
 
-COMMENT ON COLUMN user_embeddings.watch_history_embedding IS 'Average embedding of last N watched videos';
-COMMENT ON COLUMN user_embeddings.liked_videos_embedding IS 'Average embedding of liked videos';
-COMMENT ON COLUMN user_embeddings.search_query_embedding IS 'BERT embedding of concatenated recent search queries';
+COMMENT ON TABLE output.user_embeddings IS 'User profile embeddings for Two-Tower recommendation architecture.';
+COMMENT ON COLUMN output.user_embeddings.watch_history_embedding IS 'Average embedding of last N watched videos';
+COMMENT ON COLUMN output.user_embeddings.liked_videos_embedding IS 'Average embedding of liked videos';
+COMMENT ON COLUMN output.user_embeddings.search_query_embedding IS 'BERT embedding of concatenated recent search queries';
 COMMENT ON FUNCTION find_videos_for_user IS 'Find top N similar videos for a user using cosine similarity';
 COMMENT ON FUNCTION get_blended_recommendations IS 'Get recommendations blending content-based, ALS, and trending sources';
 
